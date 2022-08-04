@@ -1,6 +1,6 @@
-import {createPromiseSaga, createPromiseThunk, handleAsyncActions, reducerUtils} from "../lib/asyncUtils";
-import * as videoAPI from "../apis/api/video";
-import {take, takeEvery, select, put,takeLatest} from 'redux-saga/effects';
+import {createPromiseSaga, createPromiseThunk, handleAsyncActions, reducerUtils} from "./asyncUtils";
+import * as videoAPI from "../axios/video";
+import {take, takeEvery, select, put, call} from 'redux-saga/effects';
 
 const API_ACTION = {
     GET_MEDIA_LIST: 'GET_MEDIA_LIST',
@@ -24,6 +24,13 @@ const ACTIONS = {
 
 Object.freeze(API_ACTION);
 
+const initialState = {
+    videoList: reducerUtils.initial(),
+    video: reducerUtils.initial(),
+    menuPath: {menu1: {id: 2, menuNm: 'KFA 경기'}},
+    postVideoData: null,
+}
+
 //api 관련
 export const getMediaList = createPromiseThunk(API_ACTION.GET_MEDIA_LIST, videoAPI.getMediaList);
 export const getVideo = id => ({type: API_ACTION.GET_MEDIA, payload: id, meta: id});
@@ -31,7 +38,7 @@ export const postVideo = (videoData) => ({type: API_ACTION.POST_VIDEO, payload: 
 export const clearVideo = () => ({type: API_ACTION.CLEAR_VIDEO});
 //상태 저장용
 export const setMenuPath = menu => ({type: ACTIONS.SET_VIDEO_MENU_PATH, menu});
-export const setVideoPostData = ({...videoData},hashtags) => ({type: ACTIONS.SET_VIDEO_POST_DATA, payload:{...videoData,hashtags}})
+export const setVideoPostData = ({...videoData}) => ({type: ACTIONS.SET_VIDEO_POST_DATA, payload:{...videoData}})
 
 const getVideoSaga = createPromiseSaga(API_ACTION.GET_MEDIA, videoAPI.getMedia);
 const postVideoSaga = createPromiseSaga(API_ACTION.POST_VIDEO, videoAPI.postVideo);
@@ -40,28 +47,29 @@ export function* getVideoDataFlow() {
     yield takeEvery(API_ACTION.GET_MEDIA, getVideoSaga);    //영상 정보 가져오고
     while (true) {
         yield take(API_ACTION.GET_MEDIA_SUCCESS);               //영상 정보 가져오는거 성공하길 기다림
-        const menu = yield select(state => state.videoManageReducer.video.data.menu);
-        yield put(setMenuPath(menu));
+        console.log('success!!')
+        // const menu = yield select(state => state.videoReducer.video.data.menu);
+        // yield put(setMenuPath(menu));
     }
 }
 
-export function* postVideoDataFlow() {
-    while(true){
-        yield take(ACTIONS.SET_VIDEO_POST_DATA);
-        const postVideoData = yield select(state=>state.videoManageReducer.postVideoData);
-        yield put(postVideo(postVideoData));
-        yield takeEvery(API_ACTION.POST_VIDEO, postVideoSaga);
-    }
-    //todo - 타임라인, 등등 기타정보 연달아 올릴 예정
+function* postVideoDataFlow(action){
+    // yield put(getVideo(3));
+    // yield takeEvery(API_ACTION.GET_MEDIA, getVideoSaga);
+
+    let postVideoData = yield select(state=>state.videoReducer.postVideoData);
+    console.log(postVideoData)
+    yield put(postVideo(postVideoData));
+    yield takeEvery(API_ACTION.POST_VIDEO,postVideoSaga);
 }
 
-const initialState = {
-    videoList: reducerUtils.initial(),
-    video: reducerUtils.initial(),
-    menuPath: {menu1: {id: 2, menuNm: 'KFA 경기'}}
+export function* defaultSaga() {
+    yield takeEvery(ACTIONS.SET_VIDEO_POST_DATA, postVideoDataFlow);
 }
 
-export default function videoManageReducer(state = initialState, action) {
+
+
+export default function videoReducer(state = initialState, action) {
     switch (action.type) {
         case API_ACTION.GET_MEDIA_LIST:
         case API_ACTION.GET_MEDIA_LIST_SUCCESS:
@@ -78,23 +86,23 @@ export default function videoManageReducer(state = initialState, action) {
         case API_ACTION.POST_VIDEO_ERROR:
             return handleAsyncActions(API_ACTION.POST_VIDEO, 'upload')(state, action);
 
-        case ACTIONS.SET_VIDEO_MENU_PATH: {
-            const menu = action.menu;
-            const menuStack = [];
-            menuStack.push(menu);
-            menu.parent && menuStack.push(menu.parent);
-            menu.parent.parent && menuStack.push(menu.parent.parent);
+        // case ACTIONS.SET_VIDEO_MENU_PATH: {
+        //     const menu = action.menu;
+        //     const menuStack = [];
+        //     menuStack.push(menu);
+        //     menu.parent && menuStack.push(menu.parent);
+        //     menu.parent.parent && menuStack.push(menu.parent.parent);
 
-            return {
-                ...state,
-                menuPath: {
-                    menu1: menuStack.pop(),
-                    menu2: menuStack.pop(),
-                    menu3: menuStack.pop(),
-                    complete: true,
-                }
-            }
-        }
+        //     return {
+        //         ...state,
+        //         menuPath: {
+        //             menu1: menuStack.pop(),
+        //             menu2: menuStack.pop(),
+        //             menu3: menuStack.pop(),
+        //             complete: true,
+        //         }
+        //     }
+        // }
 
         case ACTIONS.SET_VIDEO_POST_DATA:{
             return{

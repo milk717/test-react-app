@@ -1,7 +1,7 @@
 
 import { BrowserRouter,Routes,Route } from 'react-router-dom';
 import Main from './Main';
-import PostData from './redux/saga/PostData';
+import PostData from './redux/PostData';
 
 
 function App() {
