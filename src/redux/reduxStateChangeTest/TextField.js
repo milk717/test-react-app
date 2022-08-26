@@ -14,6 +14,7 @@ const TextField = () =>{
     return(
         <>
             <input type = 'text' value = {input} onChange = {handleChagne}/>
+            <input type="number" />
         </>
     )
 }
